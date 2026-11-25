@@ -229,9 +229,9 @@
 <div class="bar"><div class="wrap">
   <div class="row">
     <input class="search" id="q" type="search" placeholder="Busca: tenis, audífonos, colchón…" aria-label="Buscar ofertas" autocomplete="off" enterkeyhint="search">
-    <select class="sort" id="sort" aria-label="Ordenar por">
+    <select class="sort" id="sort" aria-label="Ordenar por" autocomplete="off">
+      <option value="new" selected>Más recientes</option>
       <option value="desc">Mayor descuento</option>
-      <option value="new">Más recientes</option>
       <option value="low">Menor precio</option>
       <option value="high">Mayor precio</option>
     </select>
@@ -281,7 +281,7 @@
   var FRESH_MIN = 30, STALE_MIN = 120;   // verde hasta 30 min, ámbar hasta 2 h, gris después
   var PAGE = 24;                          // tarjetas por tanda
   var data = { items: [], groups: [], updatedAt: null, v: null };
-  var st = { group: 'Todas', store: 'Todas', sort: 'desc', favOnly: false, bf: false };
+  var st = { group: 'Todas', store: 'Todas', sort: 'new', favOnly: false, bf: false };
   var BF_START = Date.parse('2026-11-27T06:00:00Z');   // viernes 27-nov-2026 00:00 hora CDMX (UTC-6)
   var favs = new Set();
   try { favs = new Set(JSON.parse(localStorage.getItem('rg_favs') || '[]')); } catch (e) {}
