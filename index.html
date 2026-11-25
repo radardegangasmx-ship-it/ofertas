@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="es-MX">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Radar de Gangas MX · Ofertas revisadas</title>
+<meta name="description" content="Ofertas de Mercado Libre y Amazon con precio y hora revisados. Se actualiza todo el día.">
+<meta property="og:title" content="Radar de Gangas MX · Ofertas revisadas">
+<meta property="og:description" content="Ofertas con precio y hora revisados. Se actualiza todo el día.">
+<style>
+  /* Palette: deep navy (trust, "radar" at night) + warm amber for prices/discounts (urgency without alarm-red);
+     neutral warm-gray surface so product photos stand out. */
+  :root { --ink:#14213d; --ink2:#4a5468; --line:#e6e2da; --bg:#f7f5f0; --card:#fff; --amber:#f2a516; --amber-ink:#7a4d00; --green:#1b7f5a; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background:var(--bg); color:var(--ink); }
+  header { background:var(--ink); color:#fff; padding:18px 16px 14px; }
+  .wrap { max-width:1100px; margin:0 auto; }
+  h1 { margin:0; font-size:22px; letter-spacing:.2px; }
+  h1 span { color:var(--amber); }
+  .tag { margin:4px 0 12px; color:#c9d1e3; font-size:14px; }
+  .join { display:flex; gap:8px; flex-wrap:wrap; }
+  .join a { color:#fff; text-decoration:none; font-size:14px; font-weight:600; padding:8px 12px; border-radius:999px; border:1px solid rgba(255,255,255,.35); }
+  .join a.wa { background:#1b7f5a; border-color:#1b7f5a; }
+  .bar { position:sticky; top:0; z-index:5; background:var(--bg); border-bottom:1px solid var(--line); padding:10px 16px; }
+  .search { width:100%; padding:10px 12px; border-radius:10px; border:1px solid var(--line); font-size:15px; background:#fff; }
+  .chips { display:flex; gap:6px; overflow-x:auto; padding-top:8px; scrollbar-width:none; }
+  .chips button { flex:none; border:1px solid var(--line); background:#fff; color:var(--ink); border-radius:999px; padding:6px 12px; font-size:14px; cursor:pointer; }
+  .chips button[aria-pressed="true"] { background:var(--ink); color:#fff; border-color:var(--ink); }
+  main { padding:14px 16px 40px; }
+  .meta { color:var(--ink2); font-size:13px; margin:0 0 12px; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(165px, 1fr)); gap:12px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; overflow:hidden; display:flex; flex-direction:column; }
+  .ph { aspect-ratio:1; background:#fff; position:relative; overflow:hidden; }
+  .ph img { position:absolute; inset:6px; width:calc(100% - 12px); height:calc(100% - 12px); object-fit:contain; }
+  .off { position:absolute; top:8px; left:8px; background:var(--amber); color:#1d1300; font-weight:800; font-size:13px; padding:3px 8px; border-radius:8px; }
+  .body { padding:10px; display:flex; flex-direction:column; gap:4px; flex:1; }
+  .t { font-size:14px; line-height:1.3; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; min-height:3.9em; }
+  .p { font-size:20px; font-weight:800; }
+  .b { color:var(--ink2); font-size:13px; text-decoration:line-through; }
+  .s { color:var(--ink2); font-size:12px; }
+  .go { margin-top:auto; display:block; text-align:center; background:var(--ink); color:#fff; text-decoration:none; font-weight:700; padding:9px; border-radius:10px; font-size:14px; }
+  .empty { text-align:center; color:var(--ink2); padding:40px 0; }
+  footer { color:var(--ink2); font-size:12px; text-align:center; padding:0 16px 30px; }
+</style>
+</head>
+<body>
+<header><div class="wrap">
+  <h1>📡 Radar de Gangas <span>MX</span></h1>
+  <p class="tag">Ofertas con precio y hora revisados. Se actualiza todo el día.</p>
+  <div class="join">
+    <a class="wa" href="https://whatsapp.com/channel/0029VbDXk5bJ3jv4KLXr1o3B" rel="noopener">🟢 Canal de WhatsApp</a>
+    <a href="https://t.me/radardegangasmx" rel="noopener">✈️ Telegram</a>
+  </div>
+</div></header>
+<div class="bar"><div class="wrap">
+  <input class="search" id="q" type="search" placeholder="Busca: tenis, audífonos, colchón…" aria-label="Buscar ofertas">
+  <div class="chips" id="chips" role="toolbar" aria-label="Categorías"></div>
+</div></div>
+<main class="wrap">
+  <p class="meta" id="meta">Cargando ofertas…</p>
+  <div class="grid" id="grid"></div>
+</main>
+<footer>Los precios cambian rápido: revisa el precio final en la tienda antes de comprar.</footer>
+<script>
+  const $ = (id) => document.getElementById(id);
+  const money = (n) => '$' + Number(n).toLocaleString('es-MX', { maximumFractionDigits: 2 });
+  const ago = (iso) => {
+    const m = Math.round((Date.now() - new Date(iso)) / 60000);
+    if (m < 60) return `hace ${Math.max(m, 1)} min`;
+    const h = Math.round(m / 60);
+    return h < 24 ? `hace ${h} h` : 'hace más de un día';
+  };
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const plain = (s) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  let data = { items: [], groups: [] }; let group = 'Todas';
+
+  function render() {
+    const q = plain($('q').value.trim());
+    const list = data.items.filter((i) => (group === 'Todas' || i.group === group) && (!q || plain(i.title).includes(q)));
+    $('grid').innerHTML = list.map((i) => `
+      <article class="card">
+        <div class="ph">${i.img ? `<img src="${esc(i.img)}" alt="" loading="lazy">` : ''}<span class="off">-${i.discount}%</span></div>
+        <div class="body">
+          <div class="t">${esc(i.title)}</div>
+          <div class="p">${money(i.price)}</div>
+          <div class="b">Antes ${money(i.before)}</div>
+          <div class="s">${esc(i.store)} · precio revisado ${ago(i.checkedAt)}</div>
+          <a class="go" href="${esc(i.url)}" target="_blank" rel="noopener sponsored">Ver oferta</a>
+        </div>
+      </article>`).join('') || '<p class="empty">No hay ofertas con esa búsqueda. Prueba otra palabra.</p>';
+    $('meta').textContent = `${list.length} ofertas · actualizado ${ago(data.updatedAt)}`;
+  }
+  function chips() {
+    const groups = ['Todas'].concat(data.groups.filter((g) => data.items.some((i) => i.group === g)));
+    $('chips').innerHTML = groups.map((g) => `<button type="button" aria-pressed="${g === group}">${esc(g)}</button>`).join('');
+    $('chips').querySelectorAll('button').forEach((b) => b.onclick = () => { group = b.textContent; chips(); render(); });
+  }
+  async function load() {
+    try {
+      data = await fetch('ofertas.json?t=' + Date.now(), { cache: 'no-store' }).then((r) => r.json());
+      chips(); render();
+    } catch { $('meta').textContent = 'No se pudieron cargar las ofertas. Intenta de nuevo en un momento.'; }
+  }
+  $('q').addEventListener('input', render);
+  load(); setInterval(load, 5 * 60000);
+</script>
+</body>
+</html>
