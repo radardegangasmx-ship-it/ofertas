@@ -106,6 +106,13 @@
   .hero .price { font-size:40px; }
   @media (min-width:720px) { .hero { grid-template-columns:1.1fr 1fr; } .hero .ph { aspect-ratio:auto; min-height:300px; } .hero .info { padding:24px; justify-content:center; } .hero .price { font-size:52px; } .hero .t { font-size:22px; } }
 
+  /* Black Friday: banda delgada, un solo renglón */
+  .bf { display:flex; align-items:center; gap:10px; width:100%; min-height:44px; padding:6px 14px; margin:0; border:0; border-radius:0; background:#111; color:#f4f1ea; font:inherit; font-size:14px; text-align:left; cursor:pointer; }
+  .bf b { color:#fff; letter-spacing:.02em; }
+  .bf .cd { margin-left:auto; font-weight:800; color:#ffb48a; font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .bf[aria-pressed="true"] { box-shadow:inset 0 -3px 0 var(--chile); }
+  .bf:focus-visible { outline:3px solid var(--chile); outline-offset:-3px; }
+  .bfwrap { background:#111; }
   .grid { list-style:none; margin:0; padding:0; display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:10px; }
   @media (min-width:640px) { .grid { grid-template-columns:repeat(auto-fill, minmax(200px,1fr)); gap:14px; } }
   .card { position:relative; display:flex; flex-direction:column; background:var(--surface); border:1px solid var(--line); border-radius:var(--r); overflow:hidden; box-shadow:var(--shadow); animation:rise .45s both; animation-delay:calc(var(--i, 0) * 28ms); transition:transform .2s, border-color .2s; }
@@ -171,6 +178,7 @@
   </div>
 </header>
 
+<div class="bfwrap"><div class="wrap" style="padding:0"><button type="button" class="bf" id="bf" aria-pressed="false"></button></div></div>
 <div class="bar"><div class="wrap">
   <div class="row">
     <input class="search" id="q" type="search" placeholder="Busca: tenis, audífonos, colchón…" aria-label="Buscar ofertas" autocomplete="off" enterkeyhint="search">
@@ -201,7 +209,8 @@
   var $ = function (id) { return document.getElementById(id); };
   var FRESH_MIN = 30, STALE_MIN = 120;   // verde hasta 30 min, ámbar hasta 2 h, gris después
   var data = { items: [], groups: [], updatedAt: null };
-  var st = { group: 'Todas', store: 'Todas', sort: 'desc', favOnly: false };
+  var st = { group: 'Todas', store: 'Todas', sort: 'desc', favOnly: false, bf: false };
+  var BF_START = Date.parse('2026-11-27T06:00:00Z');   // viernes 27-nov-2026 00:00 hora CDMX (UTC-6)
   var favs = new Set();
   try { favs = new Set(JSON.parse(localStorage.getItem('rg_favs') || '[]')); } catch (e) {}
   function saveFavs() { try { localStorage.setItem('rg_favs', JSON.stringify(Array.from(favs))); } catch (e) {} }
@@ -268,7 +277,7 @@
     var q = plain($('q').value.trim());
     var list = data.items.filter(function (i) {
       return (st.group === 'Todas' || i.group === st.group) && (st.store === 'Todas' || i.store === st.store) &&
-        (!st.favOnly || favs.has(i.id)) && (!q || plain(i.title).indexOf(q) !== -1);
+        (!st.favOnly || favs.has(i.id)) && (!st.bf || i.bf) && (!q || plain(i.title).indexOf(q) !== -1);
     });
     var by = { desc: function (a, b) { return b.discount - a.discount || a.price - b.price; },
       new: function (a, b) { return new Date(b.checkedAt) - new Date(a.checkedAt) || b.id - a.id; },
@@ -289,21 +298,29 @@
     });
   }
 
-  function clearAll() { $('q').value = ''; st.group = 'Todas'; st.store = 'Todas'; st.favOnly = false; drawChips(); render(); }
+  function clearAll() { $('q').value = ''; st.group = 'Todas'; st.store = 'Todas'; st.favOnly = false; st.bf = false; drawChips(); render(); }
   function render() {
     var list = filtered();
     var rest = list;
     if (!list.length) {
-      var why = st.favOnly ? ['💚', 'Aún no guardas ninguna', 'Toca el corazón en una oferta y la verás aquí.'] : ['🔭', 'Nada por aquí… todavía', 'Prueba con otra palabra o quita algún filtro. Las ofertas nuevas llegan todo el día.'];
+      var why = st.bf ? ['🖤', 'Black Friday: aún no hay ofertas aquí', 'Estamos pendientes. En cuanto aparezcan las primeras, las verás en esta sección y en el canal.'] : st.favOnly ? ['💚', 'Aún no guardas ninguna', 'Toca el corazón en una oferta y la verás aquí.'] : ['🔭', 'Nada por aquí… todavía', 'Prueba con otra palabra o quita algún filtro. Las ofertas nuevas llegan todo el día.'];
       $('grid').innerHTML = '<li class="empty"><span class="big" aria-hidden="true">' + why[0] + '</span><h2>' + why[1] + '</h2><p>' + why[2] + '</p><button type="button" id="reset">Quitar filtros y ver todo</button></li>';
-      $('reset').onclick = clearAll;
+      $('reset').onclick = clearAll; $('reset').textContent = st.bf ? 'Ver todas las ofertas' : 'Quitar filtros y ver todo';
     } else $('grid').innerHTML = rest.map(card).join('');
     bindImages($('grid'));
-    var act = st.favOnly || st.group !== 'Todas' || st.store !== 'Todas' || $('q').value.trim();
+    var act = st.bf || st.favOnly || st.group !== 'Todas' || st.store !== 'Todas' || $('q').value.trim();
     $('meta').innerHTML = '<span class="live" aria-hidden="true"></span><span><b>' + list.length + (list.length === 1 ? ' oferta' : ' ofertas') + '</b> · actualizadas ' + ago(data.updatedAt) + '</span>' + (act ? '<button type="button" class="clear" id="clr">Quitar filtros</button>' : '');
     if (act) $('clr').onclick = clearAll;
   }
 
+  function bfBand() {
+    var n = data.items.filter(function (i) { return i.bf; }).length, b = $('bf'), ms = BF_START - Date.now(), cd;
+    if (ms > 0) { var m = Math.floor(ms / 60000), d = Math.floor(m / 1440), h = Math.floor(m % 1440 / 60); cd = 'Empieza en ' + (d ? d + ' d ' : '') + h + ' h ' + (m % 60) + ' min'; }
+    else cd = 'Black Friday en curso';
+    b.setAttribute('aria-pressed', st.bf);
+    b.innerHTML = '<span aria-hidden="true">🖤</span><b>' + (n ? 'Black Friday · ' + n + (n === 1 ? ' oferta' : ' ofertas') : 'Black Friday · pronto') + '</b><span class="cd">' + cd + '</span>';
+  }
+  $('bf').onclick = function () { st.bf = !st.bf; bfBand(); render(); window.scrollTo({ top: 0 }); };
   function count(fn) { return data.items.filter(fn).length; }
   function chip(label, pressed, extra, cls) { return '<button type="button" class="chip ' + (cls || '') + '" aria-pressed="' + pressed + '">' + label + (extra != null ? '<span class="n">' + extra + '</span>' : '') + '</button>'; }
   function drawChips() {
@@ -357,7 +374,7 @@
   var first = true;
   function load() {
     return fetch('ofertas.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { if (!r.ok) throw 0; return r.json(); }).then(function (d) {
-      data = d; drawChips(); render();
+      data = d; drawChips(); bfBand(); render();
       if (first) { first = false; jumpToHash(); }
     }).catch(function () {
       if (first) { $('grid').innerHTML = '<li class="empty"><span class="big" aria-hidden="true">📡</span><h2>No pudimos cargar las ofertas</h2><p>Revisa tu conexión e intenta otra vez.</p><button type="button" id="retry">Reintentar</button></li>'; $('retry').onclick = function () { skeleton(); load(); }; $('meta').textContent = 'Sin conexión por ahora.'; }
@@ -366,7 +383,7 @@
   var timer; $('q').addEventListener('input', function () { clearTimeout(timer); timer = setTimeout(render, 120); });
   $('sort').addEventListener('change', function () { st.sort = this.value; render(); });
   skeleton(); load();
-  setInterval(load, 5 * 60000); setInterval(tick, 30000);
+  setInterval(load, 5 * 60000); setInterval(tick, 30000); setInterval(function () { if (data.items) bfBand(); }, 60000);
   document.addEventListener('visibilitychange', function () { if (!document.hidden) { tick(); if (mins(data.updatedAt || new Date()) > 5) load(); } });
 })();
 </script>
