@@ -4,15 +4,16 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Radar de Gangas MX · Ofertas con precio y hora revisados</title>
-<meta name="description" content="Gangas de Mercado Libre y Amazon México con el precio y la hora en que se revisó. Se actualiza todo el día.">
+<meta name="description" content="Gangas de varias tiendas de México con el precio y la hora en que se revisó. Se actualiza todo el día.">
 <meta name="theme-color" content="#f4efe4" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#06120e" media="(prefers-color-scheme: dark)">
 <meta name="color-scheme" content="light dark">
+<script>try{var t=localStorage.getItem("rg_theme");document.documentElement.setAttribute("data-theme",t==="dark"?"dark":"light");}catch(e){document.documentElement.setAttribute("data-theme","light");}</script>
 <meta property="og:type" content="website">
 <meta property="og:locale" content="es_MX">
 <meta property="og:site_name" content="Radar de Gangas MX">
 <meta property="og:title" content="Radar de Gangas MX · Gangas con precio y hora revisados">
-<meta property="og:description" content="Descuentos de verdad en Mercado Libre y Amazon México. Cada precio dice cuándo se revisó.">
+<meta property="og:description" content="Descuentos de verdad en varias tiendas de México. Cada precio dice cuándo se revisó.">
 <meta name="twitter:card" content="summary">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2306120e'/%3E%3Ccircle cx='32' cy='32' r='20' fill='none' stroke='%23b4f03c' stroke-width='3'/%3E%3Ccircle cx='32' cy='32' r='10' fill='none' stroke='%23b4f03c' stroke-width='3' opacity='.6'/%3E%3Ccircle cx='42' cy='23' r='5' fill='%23ff6a3d'/%3E%3C/svg%3E">
 <style>
@@ -28,18 +29,14 @@
     --phos:#b4f03c; --btn:#10231c; --btn-ink:#f4efe4; --shadow:0 1px 0 rgba(16,35,28,.06), 0 8px 24px -14px rgba(16,35,28,.35);
     --r:18px;
   }
-  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
-    --bg:#06120e; --surface:#0d1d17; --ink:#e9f2ea; --ink2:#9db3a7; --line:#1d3329;
-    --chile:#ff6a3d; --chile-bg:#2a140d; --chile-ink:#1a0a05;
-    --radar:#5fe0a5; --radar-soft:#12302440; --warn:#f0b445; --old:#7f9488;
-    --btn:#b4f03c; --btn-ink:#06120e; --shadow:0 0 0 1px rgba(180,240,60,.04);
-  } }
   :root[data-theme="dark"] {
     --bg:#06120e; --surface:#0d1d17; --ink:#e9f2ea; --ink2:#9db3a7; --line:#1d3329;
     --chile:#ff6a3d; --chile-bg:#2a140d; --chile-ink:#1a0a05;
     --radar:#5fe0a5; --radar-soft:#12302440; --warn:#f0b445; --old:#7f9488;
     --btn:#b4f03c; --btn-ink:#06120e; --shadow:0 0 0 1px rgba(180,240,60,.04);
   }
+  .join .theme { font:inherit; cursor:pointer; background:transparent; color:inherit; border:1px solid currentColor; border-radius:999px; padding:10px 14px; min-height:44px; opacity:.9; }
+  .join .theme:focus-visible { outline:3px solid var(--phos); outline-offset:2px; }
   * { box-sizing:border-box; }
   html { -webkit-text-size-adjust:100%; scroll-padding-top:120px; }
   body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; -webkit-font-smoothing:antialiased; }
@@ -169,11 +166,12 @@
   <div class="radar" aria-hidden="true"><i></i><i></i><i></i></div>
   <div class="wrap">
     <div class="brand">Radar de Gangas MX</div>
-    <h1>Ofertas de <em>Mercado Libre y Amazon</em> </h1>
+    <h1>Ofertas de <em>varias tiendas</em> </h1>
     <p class="lede">Toca “Ver oferta” en la que te guste. Cada una dice cuándo se revisó el precio.</p>
     <div class="join">
       <a class="wa" href="https://whatsapp.com/channel/0029VbDXk5bJ3jv4KLXr1o3B" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.2 14.2c-.2.6-1.2 1.1-1.7 1.2-.4.1-1 .1-1.6-.1-.4-.1-.9-.3-1.5-.6-2.6-1.1-4.3-3.8-4.4-4-.1-.2-1.1-1.4-1.1-2.7s.7-1.9.9-2.2c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.8 1.9c.1.1.1.3 0 .4l-.3.5-.4.4c-.1.1-.3.3-.1.6.2.3.7 1.2 1.5 1.9 1 .9 1.9 1.2 2.2 1.3.3.1.4.1.6-.1l.8-1c.2-.2.4-.2.6-.1l1.8.9c.3.1.4.2.5.3.1.1.1.6-.1 1.1Z"/></svg>Ofertas por WhatsApp</a>
       <a href="https://t.me/radardegangasmx" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21.9 4.3 18.7 19.6c-.2 1-.9 1.3-1.7.8l-4.8-3.6-2.3 2.3c-.3.3-.5.5-1 .5l.4-4.9 8.9-8c.4-.3-.1-.5-.6-.2L6.6 13 1.9 11.500c-1-.3-1-1 .2-1.500L20.400 3c.9-.3 1.600.2 1.500 1.300Z"/></svg>Telegram</a>
+      <button type="button" class="theme" id="themeBtn" aria-pressed="false"></button>
     </div>
   </div>
 </header>
@@ -204,6 +202,23 @@
 </div></footer>
 
 <script>
+  (function () {
+    var root = document.documentElement, btn = document.getElementById('themeBtn');
+    function paint() {
+      var dark = root.getAttribute('data-theme') === 'dark';
+      btn.textContent = dark ? '☀️ Modo claro' : '🌙 Modo oscuro';
+      btn.setAttribute('aria-pressed', String(dark));
+      var metas = document.querySelectorAll('meta[name="theme-color"]');
+      for (var k = 0; k < metas.length; k++) metas[k].setAttribute('content', dark ? '#06120e' : '#f4efe4');
+    }
+    btn.addEventListener('click', function () {
+      var next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      root.setAttribute('data-theme', next);
+      try { localStorage.setItem('rg_theme', next); } catch (e) {}
+      paint();
+    });
+    paint();
+  })();
 (function () {
   'use strict';
   var $ = function (id) { return document.getElementById(id); };
