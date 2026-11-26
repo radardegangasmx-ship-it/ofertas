@@ -361,7 +361,8 @@
     var q = plain($('q').value.trim());
     return data.items.filter(function (i) {
       return passes(i, st) && (!st.favOnly || favs.has(i.id)) && (!st.bf || i.bf) && (!q || i._q.indexOf(q) !== -1);
-    }).sort(SORTS[st.sort]);
+    // Mercado Libre always goes first (owner, 26-nov-2026), whatever the order or filter.
+    }).sort(function (a, b) { return ((b.store === 'Mercado Libre') - (a.store === 'Mercado Libre')) || SORTS[st.sort](a, b); });
   }
 
   // ---------- Pintado por tandas ----------
