@@ -241,6 +241,7 @@
 <div class="wrap filt">
   <div class="chips" id="chips" role="group" aria-label="Categorías"></div>
   <div class="chips tiendas" id="stores" role="group" aria-label="Tiendas"></div>
+  <div class="chips tiendas" id="prices" role="group" aria-label="Precio y descuento"></div>
 </div>
 
 <main class="wrap" id="main">
@@ -281,7 +282,7 @@
   var FRESH_MIN = 30, STALE_MIN = 120;   // verde hasta 30 min, ámbar hasta 2 h, gris después
   var PAGE = 24;                          // tarjetas por tanda
   var data = { items: [], groups: [], updatedAt: null, v: null };
-  var st = { group: 'Todas', store: 'Todas', sort: 'new', favOnly: false, bf: false };
+  var st = { group: 'Todas', store: 'Todas', sort: 'new', favOnly: false, bf: false , max: 0, half: false };
   var BF_START = Date.parse('2026-11-27T06:00:00Z');   // viernes 27-nov-2026 00:00 hora CDMX (UTC-6)
   var favs = new Set();
   try { favs = new Set(JSON.parse(localStorage.getItem('rg_favs') || '[]')); } catch (e) {}
@@ -352,11 +353,14 @@
   var SORTS = { desc: function (a, b) { return b.discount - a.discount || a.price - b.price; },
     new: function (a, b) { return b._ts - a._ts || b.id - a.id; },
     low: function (a, b) { return a.price - b.price; }, high: function (a, b) { return b.price - a.price; } };
+  function passes(i, f) {
+    return (f.group === 'Todas' || i.group === f.group) && (f.store === 'Todas' || i.store === f.store) &&
+      (!f.max || i.price <= f.max) && (!f.half || i.discount >= 50);
+  }
   function filtered() {
     var q = plain($('q').value.trim());
     return data.items.filter(function (i) {
-      return (st.group === 'Todas' || i.group === st.group) && (st.store === 'Todas' || i.store === st.store) &&
-        (!st.favOnly || favs.has(i.id)) && (!st.bf || i.bf) && (!q || i._q.indexOf(q) !== -1);
+      return passes(i, st) && (!st.favOnly || favs.has(i.id)) && (!st.bf || i.bf) && (!q || i._q.indexOf(q) !== -1);
     }).sort(SORTS[st.sort]);
   }
 
@@ -391,7 +395,7 @@
   $('barClr').addEventListener('click', function () { clearAll(); });
   $('moreBtn').addEventListener('click', function () { appendMore(PAGE); });
 
-  function clearAll() { pin = hlId = null; $('q').value = ''; st.group = 'Todas'; st.store = 'Todas'; st.favOnly = false; st.bf = false; syncChips(); bfBand(); render(); topOfList(); }
+  function clearAll() { pin = hlId = null; $('q').value = ''; st.group = 'Todas'; st.store = 'Todas'; st.favOnly = false; st.bf = false; st.max = 0; st.half = false; syncChips(); bfBand(); render(); topOfList(); }
   function topOfList() { var y = $('main').getBoundingClientRect().top + window.scrollY - (document.querySelector('.bar').offsetHeight || 0) - 8; if (window.scrollY > y) window.scrollTo({ top: Math.max(0, y) }); }
 
   function render(keep) {
@@ -404,7 +408,7 @@
       grid.innerHTML = '<li class="empty"><span class="big" aria-hidden="true">' + why[0] + '</span><h2>' + why[1] + '</h2><p>' + why[2] + '</p><button type="button" id="reset">' + (st.bf ? 'Ver todas las ofertas' : 'Quitar filtros y ver todo') + '</button></li>';
       $('reset').onclick = clearAll; more.hidden = true;
     } else appendMore(Math.max(PAGE, keep || 0));
-    var act = st.bf || st.favOnly || st.group !== 'Todas' || st.store !== 'Todas' || $('q').value.trim();
+    var act = st.bf || st.favOnly || st.max || st.half || st.group !== 'Todas' || st.store !== 'Todas' || $('q').value.trim();
     $('meta').innerHTML = '<span class="live" aria-hidden="true"></span><span><b>' + view.length + (view.length === 1 ? ' oferta' : ' ofertas') + '</b>' + (data.updatedAt ? ' · <span id="age">actualizadas ' + ago(data.updatedAt) + '</span>' : '') + '</span>' + (act ? '<button type="button" class="clear" id="clr">Quitar filtros</button>' : '');
     if (act) $('clr').onclick = clearAll;
     $('barClr').hidden = !act;
@@ -433,30 +437,32 @@
     if (st.store !== 'Todas' && !sc[st.store]) st.store = 'Todas';
     $('chips').innerHTML = '<span class="lbl">Categoría:</span>' + chip('♥ Guardadas', 'fav', '', '<span id="favN">0</span>', 'fav') + chip('Todas', 'g', 'Todas', data.items.length) + groups.map(function (g) { return chip(esc(g), 'g', g, gc[g]); }).join('');
     $('stores').innerHTML = '<span class="lbl">Tienda:</span>' + chip('Todas las tiendas', 's', 'Todas', data.items.length) + stores.map(function (s) { return chip(esc(s), 's', s, sc[s]); }).join('');
+    $('prices').innerHTML = '<span class="lbl">Precio:</span>' + chip('Cualquiera', 'p', '0', data.items.length) + [300, 500, 1000].map(function (p) { return chip('Hasta $' + p.toLocaleString('en-US'), 'p', String(p), 0); }).join('') + chip('50% o más', 'half', '', 0);
     syncChips();
   }
   // Los números de cada filtro cuentan lo que quedaría al elegirlo junto con el otro filtro activo; los que quedarían en 0 se ocultan
   function chipCount(k, v) {
-    if (k === 'g') return v === 'Todas' ? (st.store === 'Todas' ? data.items.length : CM.s[st.store] || 0) : (st.store === 'Todas' ? CM.g[v] || 0 : CM.gs[v + '\u0001' + st.store] || 0);
-    return v === 'Todas' ? (st.group === 'Todas' ? data.items.length : CM.g[st.group] || 0) : (st.group === 'Todas' ? CM.s[v] || 0 : CM.gs[st.group + '\u0001' + v] || 0);
+    var f = { group: st.group, store: st.store, max: st.max, half: st.half };
+    if (k === 'g') f.group = v; else if (k === 's') f.store = v; else if (k === 'p') f.max = Number(v); else f.half = true;
+    return data.items.filter(function (i) { return passes(i, f); }).length;
   }
   function syncChips() {
     document.querySelectorAll('.chip[data-k]').forEach(function (b) {
-      var k = b.getAttribute('data-k'), v = b.getAttribute('data-v'), on = k === 'fav' ? st.favOnly : k === 'g' ? st.group === v : st.store === v;
+      var k = b.getAttribute('data-k'), v = b.getAttribute('data-v'), on = k === 'fav' ? st.favOnly : k === 'g' ? st.group === v : k === 's' ? st.store === v : k === 'p' ? st.max === Number(v) : st.half;
       b.setAttribute('aria-pressed', String(on));
-      if (k !== 'fav') { var n = chipCount(k, v), sp = b.querySelector('.n'); if (sp) sp.textContent = n; b.hidden = !on && n === 0 && v !== 'Todas'; }
+      if (k !== 'fav') { var n = chipCount(k, v), sp = b.querySelector('.n'); if (sp) sp.textContent = n; b.hidden = !on && n === 0 && v !== 'Todas' && !(k === 'p' && v === '0'); }
     });
     var f = $('favN'); if (f) f.textContent = data.items.filter(function (i) { return favs.has(i.id); }).length;
   }
   function onChip(e) {
     var b = e.target.closest && e.target.closest('.chip[data-k]'); if (!b) return;
     var k = b.getAttribute('data-k'), v = b.getAttribute('data-v');
-    if (k === 'fav') st.favOnly = !st.favOnly; else if (k === 'g') st.group = v; else st.store = v;
+    if (k === 'fav') st.favOnly = !st.favOnly; else if (k === 'g') st.group = v; else if (k === 's') st.store = v; else if (k === 'p') st.max = Number(v); else st.half = !st.half;
     pin = hlId = null; syncChips(); render(); topOfList();
   }
-  $('chips').addEventListener('click', onChip); $('stores').addEventListener('click', onChip);
+  $('chips').addEventListener('click', onChip); $('stores').addEventListener('click', onChip); $('prices').addEventListener('click', onChip);
   // Con mouse: la rueda mueve los filtros de lado cuando no caben
-  [$('chips'), $('stores')].forEach(function (el) { el.addEventListener('wheel', function (e) { if (el.scrollWidth > el.clientWidth && Math.abs(e.deltaY) > Math.abs(e.deltaX)) { el.scrollLeft += e.deltaY; e.preventDefault(); } }, { passive: false }); });
+  [$('chips'), $('stores'), $('prices')].forEach(function (el) { el.addEventListener('wheel', function (e) { if (el.scrollWidth > el.clientWidth && Math.abs(e.deltaY) > Math.abs(e.deltaX)) { el.scrollLeft += e.deltaY; e.preventDefault(); } }, { passive: false }); });
 
   var tt; function toast(m) { var t = $('toast'); if (!t) { t = document.createElement('div'); t.id = 'toast'; t.className = 'toast'; t.setAttribute('role', 'status'); document.body.appendChild(t); } t.textContent = m; t.hidden = false; clearTimeout(tt); tt = setTimeout(function () { t.hidden = true; }, 2200); }
   // Corazones (delegación)
