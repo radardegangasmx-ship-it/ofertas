@@ -310,6 +310,33 @@
   @media (min-width:560px) and (max-width:639px) { .grid { grid-template-columns:repeat(3, minmax(0,1fr)); } }
   @media (max-height:520px) and (max-width:739px) { .grid { grid-template-columns:repeat(3, minmax(0,1fr)); } }
   @media (max-width:350px) { .acts { gap:4px; } }
+  /* Section tabs and clean filter pills (owner, 27-nov-2026) */
+  .tabs { display:flex; justify-content:space-between; position:relative; border-bottom:1px solid var(--line); --coral:#d6361c; }
+  :root[data-theme="dark"] .tabs { --coral:#ff6a3d; }
+  .tabs button { display:flex; align-items:center; gap:6px; min-height:44px; border:0; background:none; padding:0 2px; font:inherit; font-size:0.875rem; font-weight:700; color:var(--ink2); cursor:pointer; white-space:nowrap; }
+  .tabs button[aria-pressed="true"] { color:var(--ink); }
+  .tabs small { font-size:0.75rem; font-weight:400; }
+  .tabs svg { color:var(--coral); flex:none; }
+  .tabs .ink { position:absolute; left:0; bottom:-1px; height:3px; width:0; border-radius:3px; background:var(--coral); transition:transform .32s ease, width .32s ease; }
+  .tabs .flash svg { animation:rg-flash .55s ease 2; }
+  @keyframes rg-flash { 50% { transform:scale(1.45); filter:drop-shadow(0 0 7px #ff6a3d); } }
+  .grid.enter > li { animation:rg-enter .38s ease both; }
+  @keyframes rg-enter { from { opacity:0; transform:translateY(14px); } }
+  @media (min-width:1000px) { .tabs { justify-content:flex-start; gap:36px; } }
+  @media (max-width:350px) { .tabs button { font-size:0.8125rem; gap:4px; } }
+  .bar { border-bottom:0; }
+  .search { border-radius:999px; padding-left:18px; }
+  .lists label { font-size:0 !important; }
+  .lists select { margin-top:0; border-radius:999px; font-weight:700; }
+  .lists select:has(option:checked:not(:first-child)) { border-color:var(--ink); }
+  .order { font-size:0; justify-content:flex-end; }
+  .order .sort { border:0; background:transparent; font-size:0.875rem; font-weight:700; padding:0; text-align:right; }
+  @media (max-width:350px) { .meta .warn { display:none; } .card .ph .time { font-size:0; justify-content:center; padding:5px 4px; } .card .ph .time b { font-size:0.6875rem; } .card .ph .time b::before { content:"Quedan "; color:#fff; font-weight:400; } .lists select { padding:0 2px !important; font-size:0.6875rem !important; } .lists label:nth-child(2) { flex:1.3; } }
+  .ph .time { position:absolute; left:0; right:0; bottom:0; display:flex; justify-content:space-between; gap:6px; background:#10231c; color:#fff; font-size:0.75rem; padding:5px 9px; pointer-events:none; white-space:nowrap; }
+  .ph .time b { color:#b6f23c; white-space:nowrap; }
+  .deal .liq { align-self:center; font-size:0.75rem; font-weight:800; color:var(--ink2); }
+  .meta .warn { font-size:0.75rem; color:var(--ink2); }
+  @media (prefers-reduced-motion:reduce) { .tabs .ink { transition:none; } .tabs .flash svg, .grid.enter > li { animation:none; } }
 </style>
 </head>
 <body>
@@ -326,6 +353,8 @@
 </header>
 
 <div class="bfwrap" id="bfwrap" hidden><div id="bf"></div></div>
+<div class="wrap" id="tabsWrap" hidden><div class="tabs" id="tabs" role="group" aria-label="Secciones"></div></div>
+
 <div class="bar"><div class="wrap">
   <div class="row" id="row">
     <input class="search" id="q" type="search" placeholder="Busca: tenis, audífonos, colchón" aria-label="Buscar ofertas" autocomplete="off" enterkeyhint="search">
@@ -400,7 +429,7 @@
   var FRESH_MIN = 30, STALE_MIN = 120;   // verde hasta 30 min, ámbar hasta 2 h, gris después
   var PAGE = 24;                          // tarjetas por tanda
   var data = { items: [], groups: [], updatedAt: null, v: null };
-  var st = { group: 'Todas', store: 'Todas', sort: 'new', favOnly: false, bf: false , max: 0, half: false };
+  var st = { group: 'Todas', store: 'Todas', sort: 'new', favOnly: false, bf: false , max: 0, half: false, sec: '' };
   // Season band. Times are CDMX (UTC-6). The band hides itself outside the season.
   var BF_START = Date.parse('2026-11-27T06:00:00Z');   // Fri 27-nov 00:00
   var BF_AFTER = Date.parse('2026-11-28T06:00:00Z');   // Sat 28-nov 00:00
@@ -434,7 +463,7 @@
   function prep(d) {
     var items = (d.items || []).filter(function (i) { return i && i.id != null && isFinite(i.price) && i.url; });
     items.forEach(function (i) {
-      i._c = clean(i.title || 'Oferta'); i._q = plain(i.title || ''); i._ts = Date.parse(i.checkedAt) || 0; i._min = isMin(i.title || '');
+      i._c = clean(i.title || 'Oferta'); i._q = plain(i.title || ''); i._ts = Date.parse(i.checkedAt) || 0; i._min = isMin(i.title || ''); i._end = Date.parse(i.endsAt) || 0;
       i.discount = Number(i.discount) || 0; i.price = Number(i.price); i.before = Number(i.before) || i.price;
     });
     d.items = items; return d;
@@ -459,7 +488,8 @@
     return '<div class="ph' + (src ? '' : ' noimg') + '">' +
       (src ? '<img src="' + esc(src) + '"' + (i.thumb && i.img ? ' data-full="' + esc(i.img) + '"' : '') + ' alt="" width="400" height="400" decoding="async" ' + (eager ? 'fetchpriority="high"' : 'loading="lazy"') + '>' : '') +
       (i.discount > 0 ? '<span class="off" aria-label="' + i.discount + ' por ciento de descuento">-' + i.discount + '%</span>' : '') +
-      '<button type="button" class="heart" data-fav="' + i.id + '" aria-pressed="' + favs.has(i.id) + '" aria-label="Guardar oferta: ' + esc(i._c) + '" title="Guardar">' + ICON_HEART + '</button></div>';
+      '<button type="button" class="heart" data-fav="' + i.id + '" aria-pressed="' + favs.has(i.id) + '" aria-label="Guardar oferta: ' + esc(i._c) + '" title="Guardar">' + ICON_HEART + '</button>' +
+      (i.section === 'relampago' && i._end ? '<span class="time">Termina en <b data-end="' + i._end + '">' + left(i._end) + '</b></span>' : '') + '</div>';
   }
   var TONES = { Amazon: 'amazon', Nike: 'nike', Walmart: 'walmart', Coppel: 'coppel', Liverpool: 'liverpool', Suburbia: 'suburbia' };
   function card(i, idx) {
@@ -469,7 +499,7 @@
       '<div class="body"><h3 class="t">' + esc(i._c) + '</h3>' +
       '<div class="price">' + money(i.price) + '</div>' +
       (ahorro > 0 ? '<div class="was">Antes <s>' + money(i.before) + '</s></div>' : '') +
-      (ahorro > 0 || i._min ? '<div class="deal">' + (ahorro > 0 ? '<span class="save">Ahorras ' + money(ahorro) + '</span>' : '') + (i._min ? '<span class="mh">Mínimo histórico</span>' : '') + '</div>' : '') +
+      (ahorro > 0 || i._min || i.section === 'liquidacion' ? '<div class="deal">' + (ahorro > 0 ? '<span class="save">Ahorras ' + money(ahorro) + '</span>' : '') + (i._min ? '<span class="mh">Mínimo histórico</span>' : '') + (i.section === 'liquidacion' ? '<span class="liq">Liquidación</span>' : '') + '</div>' : '') +
       '<div class="store">' + freshHtml(i) + '</div>' + actions(i) + '</div></li>';
   }
 
@@ -488,9 +518,56 @@
   function filtered() {
     var q = plain($('q').value.trim());
     return data.items.filter(function (i) {
-      return passes(i, st) && (!st.favOnly || favs.has(i.id)) && (!st.bf || i.bf) && (!q || i._q.indexOf(q) !== -1);
+      return alive(i) && (!st.sec || i.section === st.sec) && passes(i, st) && (!st.favOnly || favs.has(i.id)) && (!st.bf || i.bf) && (!q || i._q.indexOf(q) !== -1);
     // Mercado Libre always goes first (owner, 26-nov-2026), whatever the order or filter.
     }).sort(function (a, b) { return ((b.store === 'Mercado Libre') - (a.store === 'Mercado Libre')) || SORTS[st.sort](a, b); });
+  }
+
+  // ---------- Secciones (Relampago / Liquidacion) ----------
+  var SEC = {
+    relampago: { name: 'Relámpago', icon: '<path d="M13 2L4 14h6l-1 8 9-12h-6z"/>', gone: 'Las relámpago ya terminaron', hint: 'Duran pocas horas. Vuelve más tarde.' },
+    liquidacion: { name: 'Liquidación', icon: '<path d="M3 3h8l10 10-8 8L3 11z"/><path d="M12 9v7M9.5 13.5L12 16l2.5-2.5"/>', gone: 'Por ahora no hay liquidación', hint: 'Vuelve más tarde.' }
+  };
+  function alive(i) { return !i._end || i._end > Date.now(); }
+  function left(end) { var m = Math.max(1, Math.ceil((end - Date.now()) / 60000)), h = Math.floor(m / 60); return h ? h + ' h' + (m % 60 ? ' ' + (m % 60) + ' min' : '') : m + ' min'; }
+  function secCount(k) { return data.items.filter(function (i) { return i.section === k && alive(i); }).length; }
+  function moveInk(b) {
+    var ink = $('tabs').querySelector('.ink'); if (!ink) return;
+    b = b || $('tabs').querySelector('[aria-pressed="true"]');
+    ink.style.width = b ? b.offsetWidth + 'px' : '0';
+    if (b) ink.style.transform = 'translateX(' + b.offsetLeft + 'px)';
+  }
+  var introDone = false;
+  function renderTabs() {
+    var keys = Object.keys(SEC).filter(secCount);
+    $('tabsWrap').hidden = !keys.length && !st.sec;
+    $('tabs').innerHTML = [''].concat(keys).map(function (k) {
+      var inner = k ? '<svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">' + SEC[k].icon + '</svg>' + SEC[k].name + ' <small>' + secCount(k) + '</small>' : 'Todas';
+      return '<button type="button" data-sec="' + k + '" aria-pressed="' + (st.sec === k) + '">' + inner + '</button>';
+    }).join('') + '<i class="ink" aria-hidden="true"></i>';
+    moveInk();
+    if (!introDone && keys.length && !st.sec) intro();
+  }
+  // One short hint per visit: the underline walks the tabs and the first icon flashes.
+  function intro() {
+    introDone = true;
+    try { if (sessionStorage.getItem('rg_intro')) return; sessionStorage.setItem('rg_intro', '1'); } catch (e) {}
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    var step = function (n, ms, flash) {
+      setTimeout(function () { var b = $('tabs').querySelectorAll('button')[n]; if (st.sec || !b) return; moveInk(b); if (flash) b.classList.add('flash'); }, ms);
+    };
+    step(1, 600, true); step(2, 1050); step(0, 1500);
+  }
+  $('tabs').addEventListener('click', function (e) {
+    var b = e.target.closest('button'); if (!b) return;
+    st.sec = b.getAttribute('data-sec'); pin = hlId = null; renderTabs(); render(); topOfList();
+    $('grid').classList.add('enter'); setTimeout(function () { $('grid').classList.remove('enter'); }, 600);
+  });
+  window.addEventListener('resize', function () { moveInk(); });
+  // Flash deals leave the page at their end time, even if it was not rebuilt or the visitor is offline.
+  function prune() {
+    var n = data.items.length; data.items = data.items.filter(alive);
+    return data.items.length !== n;
   }
 
   // ---------- Pintado por tandas ----------
@@ -529,16 +606,20 @@
 
   function render(keep) {
     view = filtered(); shown = 0; grid.innerHTML = '';
+    var ended = st.sec && !secCount(st.sec);
     if (pin != null) { for (var p = 0; p < view.length; p++) if (view[p].id === pin) { view.unshift(view.splice(p, 1)[0]); break; } }   // oferta compartida: va primero, sin pintar todo lo anterior
-    if (!view.length && !data.items.length) {
+    if (ended) {
+      grid.innerHTML = emptyHtml('search', SEC[st.sec].gone, SEC[st.sec].hint, 'reset', 'Ver todas las ofertas');
+      $('reset').onclick = function () { st.sec = ''; renderTabs(); clearAll(); }; more.hidden = true;
+    } else if (!view.length && !data.items.length) {
       grid.innerHTML = emptyHtml('search', 'Aún no hay ofertas publicadas', 'Vuelve en un rato: las ofertas nuevas llegan todo el día.'); more.hidden = true;
     } else if (!view.length) {
       grid.innerHTML = st.favOnly ? emptyHtml('fav', 'Aún no guardas ninguna', 'Toca el corazón de una oferta para tenerla a la mano.', 'reset', 'Ver ofertas')
-        : emptyHtml('search', 'No encontramos eso', 'Prueba con otra palabra o quita algún filtro.', 'reset', 'Ver todas las ofertas');
+        : emptyHtml('search', 'No encontramos eso', 'Prueba con otra palabra o quita algún filtro.', 'reset', st.sec ? 'Quitar filtros' : 'Ver todas las ofertas');
       $('reset').onclick = clearAll; more.hidden = true;
     } else appendMore(Math.max(PAGE, keep || 0));
     var act = st.bf || st.favOnly || st.max || st.half || st.group !== 'Todas' || st.store !== 'Todas' || $('q').value.trim();
-    $('meta').innerHTML = '<span><b>' + view.length + (view.length === 1 ? ' oferta' : ' ofertas') + '</b></span>' + (act ? '<button type="button" class="clear" id="clr">Quitar filtros</button>' : '');
+    $('meta').innerHTML = '<span><b>' + view.length + (view.length === 1 ? ' oferta' : ' ofertas') + '</b></span>' + (act ? '<button type="button" class="clear" id="clr">Quitar filtros</button>' : '') + (st.sec === 'relampago' && view.length ? '<span class="warn">Pueden agotarse antes</span>' : '');
     $('age').textContent = data.updatedAt ? 'Actualizada ' + ago(data.updatedAt) + '.' : '';
     if (act) $('clr').onclick = clearAll;
     $('barClr').hidden = !act;
@@ -610,7 +691,7 @@
   // Phones and tablets: three lists instead of the chip rows (same state, same filters)
   function opt(v, label, on) { return '<option value="' + esc(v) + '"' + (on ? ' selected' : '') + '>' + esc(label) + '</option>'; }
   function syncLists() {
-    var land = LAND.matches, favN = data.items.filter(function (i) { return favs.has(i.id); }).length;
+    var land = true, favN = data.items.filter(function (i) { return favs.has(i.id); }).length;
     $('selStore').innerHTML = opt('Todas', land ? 'Tienda' : 'Todas', st.store === 'Todas') + Object.keys(CM.s).sort().map(function (n) { return opt(n, n + ' (' + chipCount('s', n) + ')', st.store === n); }).join('');
     $('selGroup').innerHTML = opt('Todas', land ? 'Categoría' : 'Todas', !st.favOnly && st.group === 'Todas') + opt('__fav', 'Guardadas (' + favN + ')', st.favOnly) +
       (data.groups || []).filter(function (g) { return CM.g[g]; }).map(function (g) { return opt(g, g + ' (' + chipCount('g', g) + ')', !st.favOnly && st.group === g); }).join('');
@@ -679,6 +760,8 @@
   // El "hace X min" se mueve solo, sin volver a pintar las tarjetas
   function tick() {
     if (document.hidden) return;
+    if (prune()) { renderTabs(); buildChips(); render(shown); }
+    document.querySelectorAll('b[data-end]').forEach(function (el) { el.textContent = left(Number(el.getAttribute('data-end'))); });
     document.querySelectorAll('.fresh[data-t]').forEach(function (el) {
       var iso = el.getAttribute('data-t');
       el.textContent = 'Revisado ' + ago(iso);
@@ -706,8 +789,8 @@
     var same = haveData && d.v != null && d.v === data.v && d.updatedAt === data.updatedAt;
     if (same) { setNet(null); return; }
     var keep = haveData ? shown : 0;
-    data = prep(d); haveData = true;
-    buildChips(); bfBand(); render(keep);
+    data = prep(d); haveData = true; prune();
+    renderTabs(); buildChips(); bfBand(); render(keep);
     setNet(null);
     if (first) { first = false; jumpToHash(); }
   }
