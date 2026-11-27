@@ -301,6 +301,15 @@
     .zinfo { flex:1; padding:64px 22px 20px; overflow:auto; }
   }
   @media (min-width:700px) and (orientation:portrait) { .zbox { flex-direction:column; height:auto; } .zpic { width:auto; height:min(52vh,520px); } .zinfo { padding:20px 24px 24px; } }
+  /* Narrow cards: the share button stays beside "Ver oferta" */
+  .acts { flex-wrap:nowrap; }
+  .acts .go { min-width:0; padding:0 4px; }
+  .acts .share { width:44px; }
+  @media (max-width:699px) { .acts .go { font-size:0.875rem; } }
+  @media (min-width:420px) and (max-width:559px) { .grid { grid-template-columns:repeat(2, minmax(0,1fr)); } }
+  @media (min-width:560px) and (max-width:639px) { .grid { grid-template-columns:repeat(3, minmax(0,1fr)); } }
+  @media (max-height:520px) and (max-width:739px) { .grid { grid-template-columns:repeat(3, minmax(0,1fr)); } }
+  @media (max-width:350px) { .acts { gap:4px; } }
 </style>
 </head>
 <body>
