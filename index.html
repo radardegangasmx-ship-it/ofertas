@@ -331,9 +331,10 @@
   .lists select:has(option:checked:not(:first-child)) { border-color:var(--ink); }
   .order { font-size:0; justify-content:flex-end; }
   .order .sort { border:0; background:transparent; font-size:0.875rem; font-weight:700; padding:0; text-align:right; }
-  @media (max-width:350px) { .meta .warn { display:none; } .card .ph .time { font-size:0; justify-content:center; padding:5px 4px; } .card .ph .time b { font-size:0.6875rem; } .card .ph .time b::before { content:"Quedan "; color:#fff; font-weight:400; } .lists select { padding:0 2px !important; font-size:0.6875rem !important; } .lists label:nth-child(2) { flex:1.3; } }
+  @media (max-width:350px) { .count .meta { flex-wrap:wrap; } .meta .warn { flex-basis:100%; } .card .ph .time { font-size:0; justify-content:center; padding:5px 4px; } .card .ph .time b { font-size:0.6875rem; } .card .ph .time b::before { content:"Quedan "; color:#fff; font-weight:400; } .lists select { padding:0 2px !important; font-size:0.6875rem !important; } .lists label:nth-child(2) { flex:1.3; } }
   .ph .time { position:absolute; left:0; right:0; bottom:0; display:flex; justify-content:space-between; gap:6px; background:#10231c; color:#fff; font-size:0.75rem; padding:5px 9px; pointer-events:none; white-space:nowrap; }
   .ph .time b { color:#b6f23c; white-space:nowrap; }
+  .card .ph.timed img { box-sizing:border-box; padding-bottom:28px; }
   .deal .liq { align-self:center; font-size:0.75rem; font-weight:800; color:var(--ink2); }
   .meta .warn { font-size:0.75rem; color:var(--ink2); }
   @media (prefers-reduced-motion:reduce) { .tabs .ink { transition:none; } .tabs .flash svg, .grid.enter > li { animation:none; } }
@@ -485,7 +486,7 @@
   // Miniatura si existe (pesa mucho menos); si falla, la foto grande. El espacio ya está reservado (aspect-ratio) y no hay saltos.
   function photo(i, idx) {
     var src = i.thumb || i.img, eager = idx < 4;
-    return '<div class="ph' + (src ? '' : ' noimg') + '">' +
+    return '<div class="ph' + (src ? '' : ' noimg') + (i.section === 'relampago' && i._end ? ' timed' : '') + '">' +
       (src ? '<img src="' + esc(src) + '"' + (i.thumb && i.img ? ' data-full="' + esc(i.img) + '"' : '') + ' alt="" width="400" height="400" decoding="async" ' + (eager ? 'fetchpriority="high"' : 'loading="lazy"') + '>' : '') +
       (i.discount > 0 ? '<span class="off" aria-label="' + i.discount + ' por ciento de descuento">-' + i.discount + '%</span>' : '') +
       '<button type="button" class="heart" data-fav="' + i.id + '" aria-pressed="' + favs.has(i.id) + '" aria-label="Guardar oferta: ' + esc(i._c) + '" title="Guardar">' + ICON_HEART + '</button>' +
@@ -530,6 +531,7 @@
   };
   function alive(i) { return !i._end || i._end > Date.now(); }
   function left(end) { var m = Math.max(1, Math.ceil((end - Date.now()) / 60000)), h = Math.floor(m / 60); return h ? h + ' h' + (m % 60 ? ' ' + (m % 60) + ' min' : '') : m + ' min'; }
+  function pool() { return st.sec ? data.items.filter(function (i) { return i.section === st.sec; }) : data.items; }
   function secCount(k) { return data.items.filter(function (i) { return i.section === k && alive(i); }).length; }
   function moveInk(b) {
     var ink = $('tabs').querySelector('.ink'); if (!ink) return;
@@ -541,10 +543,12 @@
   function renderTabs() {
     var keys = Object.keys(SEC).filter(secCount);
     $('tabsWrap').hidden = !keys.length && !st.sec;
+    var focused = $('tabs').contains(document.activeElement);
     $('tabs').innerHTML = [''].concat(keys).map(function (k) {
       var inner = k ? '<svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">' + SEC[k].icon + '</svg>' + SEC[k].name + ' <small>' + secCount(k) + '</small>' : 'Todas';
       return '<button type="button" data-sec="' + k + '" aria-pressed="' + (st.sec === k) + '">' + inner + '</button>';
     }).join('') + '<i class="ink" aria-hidden="true"></i>';
+    if (focused) { var on = $('tabs').querySelector('[aria-pressed="true"]'); if (on) on.focus({ preventScroll: true }); }
     moveInk();
     if (!introDone && keys.length && !st.sec) intro();
   }
@@ -560,14 +564,23 @@
   }
   $('tabs').addEventListener('click', function (e) {
     var b = e.target.closest('button'); if (!b) return;
-    st.sec = b.getAttribute('data-sec'); pin = hlId = null; renderTabs(); render(); topOfList();
+    st.sec = b.getAttribute('data-sec'); pin = hlId = null; renderTabs(); buildChips(); render(); topOfList();
+    $('grid').querySelectorAll('.card.a').forEach(function (c) { c.classList.remove('a'); });
     $('grid').classList.add('enter'); setTimeout(function () { $('grid').classList.remove('enter'); }, 600);
   });
   window.addEventListener('resize', function () { moveInk(); });
   // Flash deals leave the page at their end time, even if it was not rebuilt or the visitor is offline.
   function prune() {
     var n = data.items.length; data.items = data.items.filter(alive);
+    var z = Number($('zoom').getAttribute('data-id'));
+    if ($('zoom').open && z && !data.items.some(function (i) { return i.id === z; })) $('zoom').close();
     return data.items.length !== n;
+  }
+  var endTimer;
+  function arm() {
+    clearTimeout(endTimer);
+    var next = Math.min.apply(null, data.items.map(function (i) { return i._end || Infinity; }).concat(Infinity));
+    if (next < Infinity) endTimer = setTimeout(function () { tick(); }, Math.min(Math.max(0, next - Date.now()) + 300, 3600000));
   }
 
   // ---------- Pintado por tandas ----------
@@ -610,11 +623,11 @@
     if (pin != null) { for (var p = 0; p < view.length; p++) if (view[p].id === pin) { view.unshift(view.splice(p, 1)[0]); break; } }   // oferta compartida: va primero, sin pintar todo lo anterior
     if (ended) {
       grid.innerHTML = emptyHtml('search', SEC[st.sec].gone, SEC[st.sec].hint, 'reset', 'Ver todas las ofertas');
-      $('reset').onclick = function () { st.sec = ''; renderTabs(); clearAll(); }; more.hidden = true;
+      $('reset').onclick = function () { st.sec = ''; renderTabs(); buildChips(); clearAll(); }; more.hidden = true;
     } else if (!view.length && !data.items.length) {
       grid.innerHTML = emptyHtml('search', 'Aún no hay ofertas publicadas', 'Vuelve en un rato: las ofertas nuevas llegan todo el día.'); more.hidden = true;
     } else if (!view.length) {
-      grid.innerHTML = st.favOnly ? emptyHtml('fav', 'Aún no guardas ninguna', 'Toca el corazón de una oferta para tenerla a la mano.', 'reset', 'Ver ofertas')
+      grid.innerHTML = st.favOnly && !data.items.some(function (i) { return favs.has(i.id); }) ? emptyHtml('fav', 'Aún no guardas ninguna', 'Toca el corazón de una oferta para tenerla a la mano.', 'reset', 'Ver ofertas')
         : emptyHtml('search', 'No encontramos eso', 'Prueba con otra palabra o quita algún filtro.', 'reset', st.sec ? 'Quitar filtros' : 'Ver todas las ofertas');
       $('reset').onclick = clearAll; more.hidden = true;
     } else appendMore(Math.max(PAGE, keep || 0));
@@ -662,22 +675,25 @@
   var CM = { gs: {}, g: {}, s: {} };   // conteos: categoría x tienda
   function buildChips() {
     var gc = {}, sc = {}, gs = {};
-    data.items.forEach(function (i) { gc[i.group] = (gc[i.group] || 0) + 1; sc[i.store] = (sc[i.store] || 0) + 1; var k = i.group + '\u0001' + i.store; gs[k] = (gs[k] || 0) + 1; });
+    var all = pool();
+    all.forEach(function (i) { gc[i.group] = (gc[i.group] || 0) + 1; sc[i.store] = (sc[i.store] || 0) + 1; var k = i.group + '\u0001' + i.store; gs[k] = (gs[k] || 0) + 1; });
+    if (st.group !== 'Todas' && !gc[st.group] && data.items.some(function (i) { return i.group === st.group; })) gc[st.group] = 0;
+    if (st.store !== 'Todas' && !sc[st.store] && data.items.some(function (i) { return i.store === st.store; })) sc[st.store] = 0;
     CM = { gs: gs, g: gc, s: sc };
-    var groups = (data.groups || []).filter(function (g) { return gc[g]; });
+    var groups = (data.groups || []).filter(function (g) { return g in gc; });
     var stores = Object.keys(sc).sort();
-    if (st.group !== 'Todas' && !gc[st.group]) st.group = 'Todas';
-    if (st.store !== 'Todas' && !sc[st.store]) st.store = 'Todas';
-    $('chips').innerHTML = '<span class="lbl">Categoría:</span>' + chip('Guardadas', 'fav', '', '<span id="favN">0</span>', 'fav') + chip('Todas', 'g', 'Todas', data.items.length) + groups.map(function (g) { return chip(esc(g), 'g', g, gc[g]); }).join('');
-    $('stores').innerHTML = '<span class="lbl">Tienda:</span>' + chip('Todas las tiendas', 's', 'Todas', data.items.length) + stores.map(function (s) { return chip(esc(s), 's', s, sc[s]); }).join('');
-    $('prices').innerHTML = '<span class="lbl">Precio:</span>' + chip('Cualquiera', 'p', '0', data.items.length) + [300, 500, 1000].map(function (p) { return chip('Hasta $' + p.toLocaleString('en-US'), 'p', String(p), 0); }).join('') + chip('50% o más', 'half', '', 0);
+    if (st.group !== 'Todas' && !(st.group in gc)) st.group = 'Todas';
+    if (st.store !== 'Todas' && !(st.store in sc)) st.store = 'Todas';
+    $('chips').innerHTML = '<span class="lbl">Categoría:</span>' + chip('Guardadas', 'fav', '', '<span id="favN">0</span>', 'fav') + chip('Todas', 'g', 'Todas', all.length) + groups.map(function (g) { return chip(esc(g), 'g', g, gc[g]); }).join('');
+    $('stores').innerHTML = '<span class="lbl">Tienda:</span>' + chip('Todas las tiendas', 's', 'Todas', all.length) + stores.map(function (s) { return chip(esc(s), 's', s, sc[s]); }).join('');
+    $('prices').innerHTML = '<span class="lbl">Precio:</span>' + chip('Cualquiera', 'p', '0', all.length) + [300, 500, 1000].map(function (p) { return chip('Hasta $' + p.toLocaleString('en-US'), 'p', String(p), 0); }).join('') + chip('50% o más', 'half', '', 0);
     syncChips();
   }
   // Los números de cada filtro cuentan lo que quedaría al elegirlo junto con el otro filtro activo; los que quedarían en 0 se ocultan
   function chipCount(k, v) {
     var f = { group: st.group, store: st.store, max: st.max, half: st.half };
     if (k === 'g') f.group = v; else if (k === 's') f.store = v; else if (k === 'p') f.max = Number(v); else f.half = true;
-    return data.items.filter(function (i) { return passes(i, f); }).length;
+    return pool().filter(function (i) { return passes(i, f); }).length;
   }
   function syncChips() {
     document.querySelectorAll('.chip[data-k]').forEach(function (b) {
@@ -694,7 +710,7 @@
     var land = true, favN = data.items.filter(function (i) { return favs.has(i.id); }).length;
     $('selStore').innerHTML = opt('Todas', land ? 'Tienda' : 'Todas', st.store === 'Todas') + Object.keys(CM.s).sort().map(function (n) { return opt(n, n + ' (' + chipCount('s', n) + ')', st.store === n); }).join('');
     $('selGroup').innerHTML = opt('Todas', land ? 'Categoría' : 'Todas', !st.favOnly && st.group === 'Todas') + opt('__fav', 'Guardadas (' + favN + ')', st.favOnly) +
-      (data.groups || []).filter(function (g) { return CM.g[g]; }).map(function (g) { return opt(g, g + ' (' + chipCount('g', g) + ')', !st.favOnly && st.group === g); }).join('');
+      (data.groups || []).filter(function (g) { return g in CM.g; }).map(function (g) { return opt(g, g + ' (' + chipCount('g', g) + ')', !st.favOnly && st.group === g); }).join('');
     $('selPrice').innerHTML = opt('0', land ? 'Precio' : 'Cualquiera', !st.max && !st.half) + [300, 500, 1000].map(function (p) { return opt(String(p), 'Hasta $' + p.toLocaleString('en-US'), st.max === p && !st.half); }).join('') + opt('half', '50% o más', st.half);
   }
   function fromList() { pin = hlId = null; syncChips(); render(); topOfList(); }
@@ -721,8 +737,9 @@
   function openZoom(id) {
     var i = data.items.filter(function (x) { return x.id === id; })[0]; if (!i || !(i.img || i.thumb) || !zoom.showModal) return;
     zoom.innerHTML = '<div class="zbox"><div class="zpic"><img src="' + esc(i.img || i.thumb) + '" alt="' + esc(i._c) + '"></div><div class="zinfo"><span class="ztag' + (i.store === 'Mercado Libre' ? ' ml' : '') + '">' + esc(i.store) + '</span><h3>' + esc(i._c) + '</h3><div class="price">' + money(i.price) + '</div>' +
+      (i.section === 'relampago' && i._end ? '<div class="was"><b>Relámpago: termina en ' + left(i._end) + '</b></div>' : i.section === 'liquidacion' ? '<div class="was"><b>Liquidación</b></div>' : '') +
       (i.before > i.price ? '<div class="was">Antes <s>' + money(i.before) + '</s>' + (i.discount > 0 ? ' · <b class="zoff">-' + i.discount + '%</b>' : '') + '</div>' : '') + actions(i) + '</div><button type="button" class="zx" aria-label="Cerrar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19"/></svg></button></div>';
-    zoom.showModal(); zoomPushed = true; history.pushState({ zoom: 1 }, '');
+    zoom.setAttribute('data-id', i.id); zoom.showModal(); zoomPushed = true; history.pushState({ zoom: 1 }, '');
   }
   function closeZoom() { if (zoom.open) zoom.close(); }
   zoom.addEventListener('close', function () { if (zoomPushed) { zoomPushed = false; history.back(); } });
@@ -761,6 +778,7 @@
   function tick() {
     if (document.hidden) return;
     if (prune()) { renderTabs(); buildChips(); render(shown); }
+    arm();
     document.querySelectorAll('b[data-end]').forEach(function (el) { el.textContent = left(Number(el.getAttribute('data-end'))); });
     document.querySelectorAll('.fresh[data-t]').forEach(function (el) {
       var iso = el.getAttribute('data-t');
@@ -774,6 +792,7 @@
     var m = /^#o(\d+)$/.exec(location.hash); if (!m) return;
     var id = Number(m[1]), pos = -1;
     for (var k = 0; k < view.length; k++) if (view[k].id === id) { pos = k; break; }
+    if (pos < 0 && st.sec && data.items.some(function (i) { return i.id === id; })) { st.sec = ''; renderTabs(); buildChips(); render(); return jumpToHash(); }
     if (pos < 0) return;
     if (pos >= PAGE) { pin = id; render(); }
     hlId = id; var el = document.getElementById('o' + id);
@@ -789,7 +808,7 @@
     var same = haveData && d.v != null && d.v === data.v && d.updatedAt === data.updatedAt;
     if (same) { setNet(null); return; }
     var keep = haveData ? shown : 0;
-    data = prep(d); haveData = true; prune();
+    data = prep(d); haveData = true; prune(); arm();
     renderTabs(); buildChips(); bfBand(); render(keep);
     setNet(null);
     if (first) { first = false; jumpToHash(); }
