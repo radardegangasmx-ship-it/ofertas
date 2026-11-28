@@ -434,7 +434,7 @@
   // Season band. Times are CDMX (UTC-6). The band hides itself outside the season.
   var BF_START = Date.parse('2026-11-27T06:00:00Z');   // Fri 27-nov 00:00
   var BF_AFTER = Date.parse('2026-11-28T06:00:00Z');   // Sat 28-nov 00:00
-  var BF_END = Date.parse('2026-11-30T06:00:00Z');     // Mon 30-nov 00:00
+  var BF_END = BF_AFTER;   // owner, 28-nov-2026: Black Friday is over, the band is not shown any more
   var favs = new Set();
   try { favs = new Set(JSON.parse(localStorage.getItem('rg_favs') || '[]')); } catch (e) {}
   function saveFavs() { try { localStorage.setItem('rg_favs', JSON.stringify(Array.from(favs))); } catch (e) {} }
